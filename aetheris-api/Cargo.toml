@@ -1,0 +1,31 @@
+[package]
+name = "aetheris-api"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+aetheris-core = { path = "../aetheris-core" }
+
+# Web framework
+axum = "0.7"
+tokio = { version = "1.0", features = ["full"] }
+
+# Serialization
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+chrono = { version = "0.4", features = ["serde"] }
+
+# Database
+sqlx = { version = "0.7", features = [
+  "runtime-tokio-rustls",
+  "postgres",
+  "chrono",
+  "uuid",
+] }
+
+# Error handling
+anyhow = "1.0"
+
+# Logging
+tracing = "0.1"
+tracing-subscriber = "0.3"
