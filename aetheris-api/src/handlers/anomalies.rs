@@ -10,9 +10,7 @@ pub async fn query_anomalies(
     State(db): State<Database>,
     Query(params): Query<AnomalyQueryParams>,
 ) -> Result<Json<Vec<AnomalyRecord>>, StatusCode> {
-    let satellite_id = params
-        .satellite_id
-        .unwrap_or_else(|| "OPS-SAT".to_string());
+    let satellite_id = params.satellite_id.unwrap_or_else(|| "OPS-SAT".to_string());
 
     let severity = params.severity;
     let limit = params.limit.unwrap_or(100).clamp(1, 1_000);

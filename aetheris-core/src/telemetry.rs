@@ -71,10 +71,10 @@ impl TelemetryPoint {
         .bind(self.quality_flag)
         .execute(pool)
         .await?;
-        
+
         Ok(())
     }
-    
+
     pub async fn query_by_sensor(
         pool: &PgPool,
         satellite_id: &str,
@@ -95,10 +95,10 @@ impl TelemetryPoint {
         .bind(limit)
         .fetch_all(pool)
         .await?;
-        
+
         Ok(points)
     }
-    
+
     pub async fn query_by_time_range(
         pool: &PgPool,
         start: DateTime<Utc>,
@@ -116,7 +116,7 @@ impl TelemetryPoint {
         .bind(end)
         .fetch_all(pool)
         .await?;
-        
+
         Ok(points)
     }
 }

@@ -1,4 +1,7 @@
-pub mod telemetry;
+pub mod anomaly;
 pub mod database;
-pub use telemetry::*;
+pub mod telemetry;
+
+pub use anomaly::detect;
 pub use database::Database;
+pub use telemetry::{Anomaly, AnomalyType, Severity, TelemetryPoint};
