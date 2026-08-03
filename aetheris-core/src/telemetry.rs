@@ -120,3 +120,10 @@ impl TelemetryPoint {
         Ok(points)
     }
 }
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DetectionEvidence {
+    pub sensor_id: String,
+    pub observed_value: f64,
+    pub threshold: f64,
+    pub reason: String,
+}

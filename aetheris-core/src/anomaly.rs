@@ -76,4 +76,20 @@ mod tests {
         assert!(matches!(anomaly.severity, Severity::Critical));
         assert!((anomaly.anomaly_score - (10.0 / 70.0)).abs() < f64::EPSILON);
     }
+
+    #[test]
+    fn replay_fixture_detects_battery_temperature_event() {
+        let readings = [
+            point("battery_temp_1", 65.0),
+            point("battery_temp_1", 68.5),
+            point("battery_temp_1", 72.0),
+            point("battery_temp_1", 81.0),
+        ];
+
+        let anomalies: Vec<_> = readings.iter().filter_map(detect).collect();
+
+        assert_eq!(anomalies.len(), 2);
+        assert!(matches!(anomalies[0].severity, Severity::High));
+        assert!(matches!(anomalies[1].severity, Severity::Critical));
+    }
 }

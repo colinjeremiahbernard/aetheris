@@ -2,7 +2,7 @@
 
 **AI-Powered Spacecraft Telemetry Intelligence Platform**
 
-A high-performance Rust-based system for real-time spacecraft telemetry monitoring, anomaly detection, and predictive maintenance using machine learning.
+A high-performance Rust-based system for real-time spacecraft telemetry monitoring, anomaly detection, and predictive maintenance using machine learning. So it is definitely an AI-powered spacecraft health intelligence system that continuously analyzes satellite telemetry, detects emerging anomalies, explain their likely causes, predicts equipment degradation, and recommends mission-operations actions.
 
 ## 🎯 Project Goal
 
