@@ -1,7 +1,7 @@
 pub mod anomaly;
 pub mod database;
-pub mod telemetry;
 pub mod replay;
+pub mod telemetry;
 
 pub use anomaly::detect;
 pub use database::Database;

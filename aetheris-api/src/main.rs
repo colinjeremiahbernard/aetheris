@@ -1,97 +1,90 @@
-mod detection;
-mod handlers;
-mod models;
-
-use aetheris_core::{detect, Database};
+use aetheris_core::replay::analyze_point;
+use aetheris_core::{Severity, TelemetryPoint};
 use axum::{
     extract::State,
     http::StatusCode,
+    response::IntoResponse,
     routing::{get, post},
     Json, Router,
 };
+use chrono::{DateTime, Utc};
+use serde::{Deserialize, Serialize};
+use std::net::SocketAddr;
+use std::sync::Arc;
+use tokio::net::TcpListener;
 
-use detection::TelemetryInput;
-use handlers::anomalies::query_anomalies;
-use tracing_subscriber;
+#[derive(Clone)]
+struct AppState {
+    satellite_id: String,
+}
+
+#[derive(Debug, Deserialize)]
+struct DetectionRequest {
+    time: DateTime<Utc>,
+    subsystem: String,
+    sensor_id: String,
+    value: f64,
+    unit: String,
+    quality_flag: i16,
+}
+
+#[derive(Debug, Serialize)]
+struct DetectionApiResponse {
+    point: TelemetryPoint,
+    severity: Option<Severity>,
+    anomaly_score: Option<f64>,
+    explanation: String,
+}
 
 #[tokio::main]
 async fn main() {
-    tracing_subscriber::fmt::init();
-
-    let database_url = std::env::var("DATABASE_URL")
-        .unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5433/aetheris".to_string());
-
-    let db = Database::new(&database_url)
-        .await
-        .expect("Failed to connect to database");
+    let state = AppState {
+        satellite_id: "AETHERIS-01".to_string(),
+    };
 
     let app = Router::new()
-        .route("/health", get(health_check))
-        .route("/api/v1/db-health", get(db_health_check))
-        .route("/api/v1/telemetry/detect", post(detect_telemetry))
-        .route("/api/v1/anomalies", get(query_anomalies))
-        .with_state(db);
+        .route("/health", get(health))
+        .route("/detect", post(detect_telemetry))
+        .with_state(Arc::new(state));
 
-    let listener = tokio::net::TcpListener::bind("0.0.0.0:3000")
-        .await
-        .expect("Failed to bind port 3000");
+    let addr: SocketAddr = "127.0.0.1:3000".parse().unwrap();
+    let listener = TcpListener::bind(addr).await.unwrap();
 
-    tracing::info!("Aetheris API listening on port 3000");
-
-    axum::serve(listener, app).await.expect("API server failed");
+    axum::serve(listener, app).await.unwrap();
 }
 
-async fn health_check() -> &'static str {
-    "Aetheris is healthy"
-}
-
-async fn db_health_check(State(db): State<Database>) -> Result<&'static str, StatusCode> {
-    db.health_check()
-        .await
-        .map(|_| "Database is healthy")
-        .map_err(|error| {
-            tracing::error!("Database health check failed: {error}");
-            StatusCode::INTERNAL_SERVER_ERROR
-        })
+async fn health() -> impl IntoResponse {
+    (StatusCode::OK, "ok")
 }
 
 async fn detect_telemetry(
-    State(db): State<Database>,
-    Json(payload): Json<TelemetryInput>,
-) -> Result<Json<aetheris_core::Anomaly>, StatusCode> {
-    let point = payload.into_point()?;
+    State(state): State<Arc<AppState>>,
+    Json(req): Json<DetectionRequest>,
+) -> Json<DetectionApiResponse> {
+    let point = TelemetryPoint {
+        time: req.time,
+        satellite_id: state.satellite_id.clone(),
+        subsystem: req.subsystem,
+        sensor_id: req.sensor_id,
+        value: req.value,
+        unit: req.unit,
+        quality_flag: req.quality_flag as i16,
+    };
 
-    let anomaly = detect(&point).ok_or(StatusCode::NO_CONTENT)?;
+    let result = analyze_point(point);
 
-    sqlx::query(
-        r#"
-        INSERT INTO anomalies
-            (
-                id,
-                time,
-                satellite_id,
-                sensor_id,
-                anomaly_score,
-                anomaly_type,
-                severity
-            )
-        VALUES
-            ($1, $2, $3, $4, $5, $6, $7)
-        "#,
-    )
-    .bind(anomaly.id)
-    .bind(anomaly.time)
-    .bind(&anomaly.satellite_id)
-    .bind(&anomaly.sensor_id)
-    .bind(anomaly.anomaly_score)
-    .bind(format!("{:?}", anomaly.anomaly_type))
-    .bind(format!("{:?}", anomaly.severity))
-    .execute(&db.pool)
-    .await
-    .map_err(|error| {
-        tracing::error!("Anomaly insert failed: {error}");
-        StatusCode::INTERNAL_SERVER_ERROR
-    })?;
+    let explanation = match result.severity {
+        Some(Severity::Critical) => "Battery temperature is critically high.".to_string(),
+        Some(Severity::High) => "Battery temperature is above the warning threshold.".to_string(),
+        Some(Severity::Medium) => "Battery temperature is elevated.".to_string(),
+        Some(Severity::Low) => "Battery temperature is slightly elevated.".to_string(),
+        None => "Telemetry is within normal range.".to_string(),
+    };
 
-    Ok(Json(anomaly))
+    Json(DetectionApiResponse {
+        point: result.point,
+        severity: result.severity,
+        anomaly_score: result.anomaly_score,
+        explanation,
+    })
 }

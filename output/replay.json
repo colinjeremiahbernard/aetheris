@@ -1,0 +1,54 @@
+[
+  {
+    "point": {
+      "time": "2026-08-03T14:00:00Z",
+      "satellite_id": "AETHERIS-01",
+      "subsystem": "power",
+      "sensor_id": "battery_temp_1",
+      "value": 65.0,
+      "unit": "C",
+      "quality_flag": 0
+    },
+    "severity": null,
+    "anomaly_score": null
+  },
+  {
+    "point": {
+      "time": "2026-08-03T14:01:00Z",
+      "satellite_id": "AETHERIS-01",
+      "subsystem": "power",
+      "sensor_id": "battery_temp_1",
+      "value": 68.5,
+      "unit": "C",
+      "quality_flag": 0
+    },
+    "severity": null,
+    "anomaly_score": null
+  },
+  {
+    "point": {
+      "time": "2026-08-03T14:02:00Z",
+      "satellite_id": "AETHERIS-01",
+      "subsystem": "power",
+      "sensor_id": "battery_temp_1",
+      "value": 72.0,
+      "unit": "C",
+      "quality_flag": 0
+    },
+    "severity": "High",
+    "anomaly_score": 0.02857142857142857
+  },
+  {
+    "point": {
+      "time": "2026-08-03T14:03:00Z",
+      "satellite_id": "AETHERIS-01",
+      "subsystem": "power",
+      "sensor_id": "battery_temp_1",
+      "value": 81.0,
+      "unit": "C",
+      "quality_flag": 0
+    },
+    "severity": "Critical",
+    "anomaly_score": 0.15714285714285714
+  }
+]

@@ -1,6 +1,7 @@
-use aetheris_core::replay::analyze_point;
+use aetheris_core::replay::{analyze_point, DetectionResult};
 use aetheris_core::{Severity, TelemetryPoint};
 use chrono::{TimeZone, Utc};
+use std::fs;
 
 fn main() {
     let readings = [
@@ -10,25 +11,31 @@ fn main() {
         ("battery_temp_1", 81.0),
     ];
 
+    let results: Vec<DetectionResult> = readings
+        .iter()
+        .enumerate()
+        .map(|(index, (sensor_id, value))| {
+            let point = TelemetryPoint {
+                time: Utc
+                    .with_ymd_and_hms(2026, 8, 3, 14, index as u32, 0)
+                    .unwrap(),
+                satellite_id: "AETHERIS-01".to_string(),
+                subsystem: "power".to_string(),
+                sensor_id: (*sensor_id).to_string(),
+                value: *value,
+                unit: "C".to_string(),
+                quality_flag: 0,
+            };
+
+            analyze_point(point)
+        })
+        .collect();
+
     println!("Aetheris telemetry replay");
     println!("Satellite: AETHERIS-01");
     println!();
 
-    for (index, (sensor_id, value)) in readings.iter().enumerate() {
-        let point = TelemetryPoint {
-            time: Utc
-                .with_ymd_and_hms(2026, 8, 3, 14, index as u32, 0)
-                .unwrap(),
-            satellite_id: "AETHERIS-01".to_string(),
-            subsystem: "power".to_string(),
-            sensor_id: (*sensor_id).to_string(),
-            value: *value,
-            unit: "C".to_string(),
-            quality_flag: 0,
-        };
-
-        let result = analyze_point(point);
-
+    for result in &results {
         match result.severity {
             Some(Severity::High) => println!(
                 "[ANOMALY] reading={:.1}{} severity=High score={:.3}",
@@ -54,4 +61,11 @@ fn main() {
             ),
         }
     }
+
+    println!();
+    let json = serde_json::to_string_pretty(&results).unwrap();
+    println!("{json}");
+
+    fs::create_dir_all("output").unwrap();
+    fs::write("output/replay.json", json).unwrap();
 }

@@ -1,6 +1,7 @@
 use crate::{detect, Severity, TelemetryPoint};
+use serde::Serialize;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize)]
 pub struct DetectionResult {
     pub point: TelemetryPoint,
     pub severity: Option<Severity>,
