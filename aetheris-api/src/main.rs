@@ -3,15 +3,21 @@ use aetheris_core::{Severity, TelemetryPoint};
 use axum::{
     extract::State,
     http::StatusCode,
-    response::IntoResponse,
+    response::{
+        sse::{Event, KeepAlive, Sse},
+        IntoResponse,
+    },
     routing::{get, post},
     Json, Router,
 };
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
-use std::net::SocketAddr;
-use std::sync::Arc;
+use std::{convert::Infallible, net::SocketAddr, sync::Arc};
 use tokio::net::TcpListener;
+use tokio_stream::StreamExt;
+use tokio_stream::wrappers::IntervalStream;
+use std::time::Duration;
+use tower_http::cors::{Any, CorsLayer};
 
 #[derive(Clone)]
 struct AppState {
@@ -36,15 +42,35 @@ struct DetectionApiResponse {
     explanation: String,
 }
 
+#[derive(Debug, Serialize)]
+struct TelemetryLiveEvent {
+    time: DateTime<Utc>,
+    satellite_id: String,
+    subsystem: String,
+    sensor_id: String,
+    value: f64,
+    unit: String,
+    quality_flag: i16,
+    severity: Option<Severity>,
+    anomaly_score: Option<f64>,
+    explanation: String,
+}
+
 #[tokio::main]
 async fn main() {
     let state = AppState {
         satellite_id: "AETHERIS-01".to_string(),
     };
+    let cors = CorsLayer::new()
+        .allow_origin(Any)
+        .allow_methods(Any)
+        .allow_headers(Any);
 
     let app = Router::new()
         .route("/health", get(health))
         .route("/detect", post(detect_telemetry))
+        .route("/telemetry/stream", get(telemetry_stream))
+        .layer(cors)
         .with_state(Arc::new(state));
 
     let addr: SocketAddr = "127.0.0.1:3000".parse().unwrap();
@@ -68,7 +94,7 @@ async fn detect_telemetry(
         sensor_id: req.sensor_id,
         value: req.value,
         unit: req.unit,
-        quality_flag: req.quality_flag as i16,
+        quality_flag: req.quality_flag,
     };
 
     let result = analyze_point(point);
@@ -87,4 +113,48 @@ async fn detect_telemetry(
         anomaly_score: result.anomaly_score,
         explanation,
     })
+}
+
+async fn telemetry_stream(
+    State(state): State<Arc<AppState>>,
+) -> Sse<impl tokio_stream::Stream<Item = Result<Event, Infallible>>> {
+    let interval = tokio::time::interval(Duration::from_secs(2));
+    let stream = IntervalStream::new(interval).map(move |_| {
+        let point = TelemetryPoint {
+            time: Utc::now(),
+            satellite_id: state.satellite_id.clone(),
+            subsystem: "power".to_string(),
+            sensor_id: "battery_temp_1".to_string(),
+            value: 72.0,
+            unit: "celsius".to_string(),
+            quality_flag: 1,
+        };
+
+        let result = analyze_point(point);
+
+        let explanation = match result.severity {
+            Some(Severity::Critical) => "Battery temperature is critically high.".to_string(),
+            Some(Severity::High) => "Battery temperature is above the warning threshold.".to_string(),
+            Some(Severity::Medium) => "Battery temperature is elevated.".to_string(),
+            Some(Severity::Low) => "Battery temperature is slightly elevated.".to_string(),
+            None => "Telemetry is within normal range.".to_string(),
+        };
+
+        let event = TelemetryLiveEvent {
+            time: result.point.time,
+            satellite_id: result.point.satellite_id,
+            subsystem: result.point.subsystem,
+            sensor_id: result.point.sensor_id,
+            value: result.point.value,
+            unit: result.point.unit,
+            quality_flag: result.point.quality_flag,
+            severity: result.severity,
+            anomaly_score: result.anomaly_score,
+            explanation,
+        };
+
+        Ok(Event::default().event("telemetry").json_data(event).unwrap())
+    });
+
+    Sse::new(stream).keep_alive(KeepAlive::default())
 }

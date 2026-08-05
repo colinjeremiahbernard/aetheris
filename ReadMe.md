@@ -1,6 +1,6 @@
 # Aetheris
 
-Aetheris is a Rust-based spacecraft telemetry anomaly detection platform with a working replay CLI, structured JSON output, and an HTTP API that returns shaped detection results.
+Aetheris is a Rust-based spacecraft telemetry anomaly detection platform. It includes a core detector, a replay CLI, a structured HTTP API, and a live telemetry dashboard for viewing telemetry as it streams in.
 
 ## What works today
 
@@ -9,12 +9,14 @@ Aetheris is a Rust-based spacecraft telemetry anomaly detection platform with a 
 - Integration tests for the public API.
 - Replay CLI that prints human-readable anomaly output.
 - JSON replay artifact written to `output/replay.json`.
-- API endpoint that returns structured detection responses.
+- HTTP API that returns structured detection responses.
+- Live telemetry dashboard with SSE streaming.
 
 ## Repository layout
 
-- `aetheris-core/` — core telemetry models, detector, replay logic, and replay binary.
+- `aetheris-core/` — core telemetry models, detector logic, replay logic, and replay binary.
 - `aetheris-api/` — HTTP API built with `axum`.
+- `aetheris-web/` — browser dashboard for live telemetry visualization.
 - `aetheris-core/tests/` — integration tests for the public detector API.
 - `aetheris-core/src/bin/replay.rs` — replay command.
 - `aetheris-core/src/replay.rs` — structured replay analysis result.
@@ -35,7 +37,19 @@ This prints a readable replay summary and writes the structured JSON to `output/
 cargo run -p aetheris-api
 ```
 
-The API exposes a detection endpoint that accepts telemetry input and returns a structured JSON result.
+The API exposes a detection endpoint that accepts telemetry input and returns a structured JSON result. It also serves the live telemetry stream used by the dashboard.
+
+## Run the dashboard
+
+Open `aetheris-web/index.html` in a browser after starting the API.
+
+If you are using a local web server for the frontend, make sure it can reach:
+
+```text
+http://127.0.0.1:3000/telemetry/stream
+```
+
+The dashboard shows live sensor name, value, severity, explanation, and a small trend chart.
 
 ## Test the project
 
@@ -54,6 +68,7 @@ Implemented:
 - Replay CLI.
 - JSON replay output.
 - Structured API detection response.
+- Live telemetry dashboard.
 - Test coverage for core and public API behavior.
 
 Planned for later:
@@ -61,7 +76,6 @@ Planned for later:
 - AI-generated explanations.
 - Predictive maintenance workflows.
 - ML/ONNX inference integration.
-- Dashboard and visualization layer.
 - Multi-satellite fleet views.
 
 ## License
