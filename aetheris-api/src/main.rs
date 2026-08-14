@@ -120,14 +120,28 @@ async fn detect_telemetry(
 async fn telemetry_stream(
     State(state): State<Arc<AppState>>,
 ) -> Sse<impl tokio_stream::Stream<Item = Result<Event, Infallible>>> {
-    let interval = tokio::time::interval(Duration::from_secs(2));
+    // Cycle through readings that cover normal, high, and critical severity.
+    let readings: &'static [(&str, f64)] = &[
+        ("battery_temp_1", 65.0),
+        ("battery_temp_1", 68.5),
+        ("battery_temp_1", 72.0),
+        ("battery_temp_1", 75.0),
+        ("battery_temp_1", 81.0),
+        ("battery_temp_1", 75.0),
+        ("battery_temp_1", 72.0),
+        ("battery_temp_1", 68.5),
+    ];
+    let counter = std::sync::Arc::new(std::sync::atomic::AtomicUsize::new(0));
+    let interval = tokio::time::interval(Duration::from_secs(3));
     let stream = IntervalStream::new(interval).map(move |_| {
+        let idx = counter.fetch_add(1, std::sync::atomic::Ordering::Relaxed) % readings.len();
+        let (sensor_id, value) = readings[idx];
         let point = TelemetryPoint {
             time: Utc::now(),
             satellite_id: state.satellite_id.clone(),
             subsystem: "power".to_string(),
-            sensor_id: "battery_temp_1".to_string(),
-            value: 72.0,
+            sensor_id: sensor_id.to_string(),
+            value,
             unit: "celsius".to_string(),
             quality_flag: 1,
         };
