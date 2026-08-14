@@ -18,6 +18,7 @@ use tokio_stream::StreamExt;
 use tokio_stream::wrappers::IntervalStream;
 use std::time::Duration;
 use tower_http::cors::{Any, CorsLayer};
+use tower_http::services::ServeDir;
 
 #[derive(Clone)]
 struct AppState {
@@ -70,6 +71,7 @@ async fn main() {
         .route("/health", get(health))
         .route("/detect", post(detect_telemetry))
         .route("/telemetry/stream", get(telemetry_stream))
+        .nest_service("/", ServeDir::new("../aetheris-web"))
         .layer(cors)
         .with_state(Arc::new(state));
 

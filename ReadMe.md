@@ -41,15 +41,13 @@ The API exposes a detection endpoint that accepts telemetry input and returns a 
 
 ## Run the dashboard
 
-Open `aetheris-web/index.html` in a browser after starting the API.
-
-If you are using a local web server for the frontend, make sure it can reach:
+Start the API first, then open your browser at:
 
 ```text
-http://127.0.0.1:3000/telemetry/stream
+http://127.0.0.1:3000
 ```
 
-The dashboard shows live sensor name, value, severity, explanation, and a small trend chart.
+The API serves the dashboard directly — no separate web server needed. The dashboard shows live sensor name, value, severity, explanation, and a small trend chart.
 
 ## Test the project
 
